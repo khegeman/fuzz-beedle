@@ -1,0 +1,3 @@
+[submodule "beedle"]
+	path = beedle
+	url = https://github.com/Cyfrin/2023-07-beedle.git
