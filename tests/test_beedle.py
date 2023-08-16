@@ -1,6 +1,6 @@
 from woke.testing.core import default_chain
 
-from .fuzz.beedle_flow import LenderFuzzTestClean
+from .fuzz.beedle_flow import LenderFuzzTest
 
 
 @default_chain.connect()
@@ -11,5 +11,5 @@ def test_default():
     Replay = int(os.getenv("WOKE_REPLAY", 0)) > 0
 
     if Replay:
-        LenderFuzzTestClean.load("replay.json")
-    LenderFuzzTestClean().run(sequences_count=1, flows_count=40)
+        LenderFuzzTest.load("replay.json")
+    LenderFuzzTest().run(sequences_count=1, flows_count=40)

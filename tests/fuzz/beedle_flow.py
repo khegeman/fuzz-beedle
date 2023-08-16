@@ -36,7 +36,7 @@ from . import invariant_impl
 from . import flow_impl
 
 
-class LenderFuzzTestClean(
+class LenderFuzzTest(
     fuzz_test.FuzzTest  # pyright: ignore [reportGeneralTypeIssues]
 ):
     # random data generation strategies
