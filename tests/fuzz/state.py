@@ -22,12 +22,6 @@ from wokelib import Mirror
 import math
 
 
-@dataclass
-class GiveLoan:
-    loan_id: uint
-    pool_id: bytes32
-
-
 _users = list()
 _tokens = list()
 

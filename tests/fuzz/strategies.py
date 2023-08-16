@@ -4,16 +4,19 @@ from woke.testing.fuzzing import generators
 from eth_utils.currency import to_wei
 import random
 
-# from .model import DataModel
 from wokelib import Mirror, get_address
 from pytypes.beedle.src.utils.Structs import Pool, Borrow, Refinance
+
+
+@dataclass
+class GiveLoan:
+    loan_id: uint
+    pool_id: bytes32
 
 
 def choose_index(model: Mirror):
     def f():
         return random.choice(model.keys())
-        # index = random.choice(model.data.index.values)
-        # return model.original_type(index)
 
     return f
 
@@ -70,15 +73,7 @@ def select_give_loan():
         loan_data = loan_mirror()[loan_id]
 
         rpools = []
-        #        df = pool_model().data
-        #
-        #        #find a suitable pool to give the loan to
-        #        ltMatch = df["loanToken"]==loan_data.loanToken
-        #        ctMatch = df["collateralToken"] == loan_data.collateralToken
-        #
-        #        loanMatch=pool_model().data[ltMatch & ctMatch]
 
-        #       rpools = [pool_model().original_type(idx) for idx in loanMatch.index]
         filtered = pool_mirror().filter(
             lambda pair: (pair[1].loanToken == loan_data.loanToken)
             & (pair[1].collateralToken == loan_data.collateralToken)
