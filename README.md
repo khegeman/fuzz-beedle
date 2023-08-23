@@ -22,10 +22,18 @@ To run fuzzing:
 
 1. In a python virtual environment `pip install -r requirements.txt`
 2. Generate woke pytypes `woke init pytypes`
-3. Run `woke fuzz -s 4f2a521550c29390 --passive -n 1 tests/test_beedle.py`
+3. Run `woke fuzz --passive -n 1 tests/test_beedle.py`
 4. Fuzz test cases will be generated and run automatically
 
 The fuzzing will continue generating new test cases until a crash or failed invariant is found.
+
+### Corpus Replay
+
+The fuzz tests record to the `.replay` directory.  To replay a recorded test, the `WOKE_REPLAY` environment variable needs to be set to the name of the recorded test.  
+
+`WOKE_REPLAY=.replay/LenderFuzzTest-20230822-213512.json woke fuzz -n 1 tests/test_beedle.py`
+
+
 
 ## Structure
 
@@ -35,7 +43,8 @@ The project contains:
 - invariant_impl.py - Invariant check implementations
 - flow_impl.py - Flow method implementations
 - state.py - Manages test state
-- 
+  
+  
 
 The flow and invariant implementations are separated to keep beedle_flow.py concise. 
 

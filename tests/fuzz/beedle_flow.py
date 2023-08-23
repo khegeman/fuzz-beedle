@@ -20,9 +20,9 @@ from .beedle import (
 import os
 from wokelib.generators.random import st
 
-Replay = int(os.getenv("WOKE_REPLAY", 0)) > 0
+Replay = os.getenv("WOKE_REPLAY", None)
 
-if Replay:
+if Replay is not None:
     from wokelib.generators.replay import fuzz_test
 else:
     from wokelib.generators.random import fuzz_test

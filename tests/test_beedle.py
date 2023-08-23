@@ -8,8 +8,8 @@ def test_default():
     default_chain.set_default_accounts(default_chain.accounts[0])
     import os
 
-    Replay = int(os.getenv("WOKE_REPLAY", 0)) > 0
+    Replay = os.getenv("WOKE_REPLAY", None)
 
-    if Replay:
-        LenderFuzzTest.load("replay.json")
-    LenderFuzzTest().run(sequences_count=1, flows_count=30)
+    if Replay is not None:
+        LenderFuzzTest.load(Replay)
+    LenderFuzzTest().run(sequences_count=1, flows_count=30, record=True)

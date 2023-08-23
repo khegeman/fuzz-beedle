@@ -16,8 +16,8 @@ clear:
 fuzz:
     woke fuzz -s 4f2a521550c29390 --passive -n 1 tests/test_beedle.py
 
-replay:
-    WOKE_REPLAY=1 woke --debug fuzz -s 4f2a521550c29390 --passive -n 1 tests/test_beedle.py
+replay filename:
+    WOKE_REPLAY={{filename}} woke --debug fuzz --passive -n 1 tests/test_beedle.py
 
 default_impl:
     @just --list --unsorted --justfile {{justfile()}} --list-heading $'Recipes:\n' --list-prefix='- '
