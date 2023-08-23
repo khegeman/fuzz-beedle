@@ -60,6 +60,8 @@ class LenderFuzzTest(
     st_auction_loan = select_auction_loan()
     st_auction_started = select_auction_loan()
 
+    st_buy_loan = select_buy_loan()
+
     # @default_chain.snapshot_and_revert()
     @invariant(period=1)
     def can_removeBalanceFromPool(self) -> None:
@@ -73,7 +75,10 @@ class LenderFuzzTest(
     def monotonic_debt(self) -> None:
         invariant_impl.monotonic_debt()
 
-    @collector()
+    @invariant(period=1)
+    def mirror_match(self) -> None:
+        invariant_impl.mirror_match()
+
     def pre_sequence(self) -> None:
         tokenCount = 2
         initialize(tokenCount)
@@ -102,10 +107,10 @@ class LenderFuzzTest(
     def startAuction(self, st_loan_id: uint) -> None:
         flow_impl.startAuction(st_loan_id)
 
-    @flow(precondition=lambda self: LoanCount() > 0, weight=0)
-    def buyLoan(self, st_auction_loan: uint):
-        # flow_impl.buyLoan(st_auction_loan)
-        pass
+    @flow(precondition=lambda self: LoanCount() > 0)
+    def buyLoan(self, st_buy_loan : BuyLoan, st_lender : Account ):
+        flow_impl.buyLoan(st_buy_loan.loan_id, st_buy_loan.pool_id, st_lender)
+        
 
     @flow(precondition=lambda self: LoanCount() > 0, weight=0)
     def zapBuyLoan(self, st_auction_loan: uint, st_lender: Account):

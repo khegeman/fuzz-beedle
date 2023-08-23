@@ -1,4 +1,30 @@
-# state for the fuzz test
+"""State management for lending protocol fuzz testing.
+
+This module manages test state including:
+
+- User accounts 
+- ERC20 tokens
+- Lender contract instance
+- Pool and loan mirrors tracking on-chain state
+
+The key functions are:
+
+- initialize() - Initializes state like accounts and contracts.
+- users() - Gets available user accounts.
+- tokens() - Gets available ERC20 contracts.
+- get_lender() - Gets the Lender contract instance.
+- pool_mirror() - Gets the Pool mirror tracking on-chain Pools.
+- loan_mirror() - Gets the Loan mirror tracking on-chain Loans.
+- update_pool() - Updates a Pool in the mirror from on-chain. 
+- update_loan() - Updates a Loan in the mirror from on-chain.
+
+The mirrors use wokelib's Mirror to track on-chain state in a local cache.
+
+This allows tests to read Pool and Loan state from the mirrors while keeping
+them synchronized with the blockchain.
+
+The initialize() method should be called first to setup the initial state.
+"""
 
 from woke.development.core import Account
 
@@ -25,8 +51,8 @@ import math
 _users = list()
 _tokens = list()
 
-_pool_mirror = Mirror()
-_loan_mirror = Mirror()
+_pool_mirror = Mirror[bytes32]()
+_loan_mirror = Mirror[uint]()
 
 _lender = None
 _owner: Account
@@ -82,7 +108,7 @@ def LoanCount():
 def update_loan(loan_id: uint):
     l: Loan = get_lender().loans(loan_id)
     if l.debt == 0:
-        loan_mirror().delete_key(loan_id)
+        loan_mirror().pop(loan_id,None)
     else:
         loan_mirror()[loan_id] = l
 
@@ -117,8 +143,9 @@ def initialize(token_count: int):
     _loan_mirror.bind(get_lender().loans)
 
     users().clear()
-    for u in default_chain.accounts[1:5]:
-        users().append(u)
+    users().extend(default_chain.accounts[1:5])
+    #for u in default_chain.accounts[1:5]:
+    #    users().append(u)
 
     tokens().clear()
     for t in [CERC20.deploy(f"T{i}", "T{i}") for i in range(0, tokenCount)]:

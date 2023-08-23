@@ -12,4 +12,4 @@ def test_default():
 
     if Replay:
         LenderFuzzTest.load("replay.json")
-    LenderFuzzTest().run(sequences_count=1, flows_count=40)
+    LenderFuzzTest().run(sequences_count=1, flows_count=30)

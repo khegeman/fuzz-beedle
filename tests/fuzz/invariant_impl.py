@@ -29,3 +29,8 @@ def monotonic_debt() -> None:
         debt = get_lender().getLoanDebt(loan_id)
         assert debt >= get_last_debt(loan_id)
         set_last_debt(loan_id, debt)
+
+def mirror_match() -> None:
+    # validate that local data matches remote
+    loan_mirror().assert_equals_remote()
+    pool_mirror().assert_equals_remote()

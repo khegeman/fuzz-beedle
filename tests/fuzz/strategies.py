@@ -13,10 +13,15 @@ class GiveLoan:
     loan_id: uint
     pool_id: bytes32
 
+@dataclass
+class BuyLoan:
+    loan_id: uint
+    pool_id: bytes32
+
 
 def choose_index(model: Mirror):
     def f():
-        return random.choice(model.keys())
+        return random.choice(list(model.keys()))
 
     return f
 
@@ -39,7 +44,7 @@ def random_pool():
         lender = st_lender()
         loanToken: ERC20 = st_loan_token()
         return Pool(
-            lender=lender,
+            lender=get_address(lender),
             loanToken=get_address(loanToken),
             collateralToken=get_address(st_loan_token()),
             minLoanSize=to_wei(100, "wei"),
@@ -86,6 +91,9 @@ def select_give_loan():
     return f
 
 
+
+
+
 def select_refinance_loan():
     def f() -> Refinance:
         loan_id = choose_index(loan_mirror())()
@@ -130,6 +138,24 @@ def select_auction_loan():
 
     return f
 
+
+def select_buy_loan():
+    def f():
+        loan_id = select_auction_loan()()
+        loan_data = loan_mirror()[loan_id]
+
+        rpools = []
+
+        filtered = pool_mirror().filter(
+            lambda pair: (pair[1].loanToken == loan_data.loanToken)
+            & (pair[1].collateralToken == loan_data.collateralToken)
+        )
+        rpools = [k for (k, v) in filtered]
+        # if we can't find a compatible pool, pick a pool that will fail and the test will validate failure case
+        target_pool = st.choose(rpools)() if len(rpools) > 1 else st_pool_id()
+        return BuyLoan(loan_id=loan_id, pool_id=target_pool)
+
+    return f
 
 st_random_pool = random_pool()
 st_random_borrow = random_borrows()
