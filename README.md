@@ -113,7 +113,7 @@ Crafting good fuzz tests for solidity smart contracts is challenging.  Through t
 
 3. There is a need for test case simplification when running large scale fuzz test with many transacitons.
 
-While working on this project, I created a method to record and replay all fuzz tests.  This is included in my  [wokelib]((https://github.com/khegeman/wokelib) project.  This was a necessary first step before I can work on problems like test case simplification. This tool will analyze recorded results to remove transactions that do not affect the final test case failure. 
+While working on this project, I created a method to record and replay all fuzz tests.  This is included in my  [wokelib](https://github.com/khegeman/wokelib) project.  This was a necessary first step before I can work on problems like test case simplification. This tool will analyze recorded results to remove transactions that do not affect the final test case failure. 
 
 
 
