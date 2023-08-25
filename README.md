@@ -10,13 +10,13 @@ The fuzz test focuses on testing the core [Lender.sol](https://github.com/Cyfrin
 
 The fuzzing workflow generates randomized test cases to cover different execution paths in Lender.sol. The goal is to find potential issues like bugs, incorrect behavior, or exploits.
 
-## Usage
-
 The main fuzz test file is [beedle_flow.py](tests/fuzz/beedle_flow.py). It inherits from Woke's FuzzTest class and defines:
 
-- Invariants checked after each test case 
+- Invariants checked after each test case
 - Random data generation strategies
 - Flow methods covering all Lender methods
+
+## Usage
 
 To run fuzzing:
 
@@ -33,8 +33,6 @@ The fuzz tests record to the `.replay` directory.  To replay a recorded test, th
 
 `WOKE_REPLAY=.replay/LenderFuzzTest-20230822-213512.json woke fuzz -n 1 tests/test_beedle.py`
 
-
-
 ## Structure
 
 The project contains:
@@ -43,12 +41,20 @@ The project contains:
 - invariant_impl.py - Invariant check implementations
 - flow_impl.py - Flow method implementations
 - state.py - Manages test state
-  
-  
 
 The flow and invariant implementations are separated to keep beedle_flow.py concise. 
 
-## Data Filtering
+## Invariants
+
+1. All lenders can withdraw all loan token balances from their respective pools.
+
+2. All loans can be repaid
+
+3. Loan debt is monotonically increasing each block
+
+4. Local copy of loan and pool data matches the data on the smart contract 
+
+## Data Selection
 
 To generate valid data for flows like giveLoan, a "mirror" class is used to track on-chain state locally. This allows implementing filters like:
 
@@ -92,6 +98,24 @@ To use the `select_give_loan` with a flow, first create a static member for the 
     def giveLoan(self, st_give_loan: GiveLoan) -> None:
         flow_impl.giveLoan(st_give_loan.loan_id, st_give_loan.pool_id)
 ```
+
+## Future Work
+
+When the contest is complete, I plan to review the findings and determine which can be found via this fuzz test.  I will add invariants to detect more bugs and vulnerabilities. 
+
+## Conclusion
+
+Crafting good fuzz tests for solidity smart contracts is challenging.  Through the process of developing this tests, I ran into 3 issues that I plan to work on improving. 
+
+1. Lack of recording capability of the random input data for inspection and debugging of tests, as well as for reproducibility.
+
+2. Lack of tools to introspect transactions and data through the flows, this makes it difficult to understand why a test failed. 
+
+3. There is a need for test case simplification when running large scale fuzz test with many transacitons.
+
+While working on this project, I created a method to record and replay all fuzz tests.  This is included in my  [wokelib]((https://github.com/khegeman/wokelib) project.  This was a necessary first step before I can work on problems like test case simplification. This tool will analyze recorded results to remove transactions that do not affect the final test case failure. 
+
+
 
 ## References
 

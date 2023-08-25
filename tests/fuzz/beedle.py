@@ -40,3 +40,6 @@ def getLoanDebt(loan: Loan, block_ts: uint) -> uint:
     interest -= fees
 
     return loan.debt + interest + fees
+
+def getPoolID(loan: Loan) -> bytes32:
+    return get_lender().getPoolId(loan.lender, loan.loanToken,loan.collateralToken)

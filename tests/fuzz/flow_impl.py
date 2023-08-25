@@ -1,3 +1,43 @@
+"""
+Implementations of core lending protocol flows for fuzz testing.
+
+This module contains the logic for executing flows like:
+
+- Setting pools
+- Borrowing 
+- Repaying
+- Giving loans
+- Starting auctions
+- Buying loans
+- Refinancing
+- Seizing collateral
+
+The flows call the Lender contract and validate the results.
+
+Flows are designed to be easily composed in sequence by the fuzzer.
+
+Key functions:
+
+- setPool: Creates a new lending pool.
+- updateMaxLoanRatio: Updates the max loan ratio for a lending pool.
+- updateInterestRate: Updates the interest rate for a lending pool.
+- borrow: Borrows tokens from a pool.
+- giveLoan: Transfers a loan between pools.
+- addToPool: Adds more tokens to increase a pool's liquidity.
+- refinance: Moves a loan to a new pool.
+- repay: Repays debt on a loan. 
+- startAuction: Starts an auction on a loan.
+- buyLoan: Buys a loan at auction.
+- zapBuyLoan: Buys a loan while opening a compatible lending pool.
+- seizeLoan: Seizes collateral after an auction.
+
+Helper functions like getPoolId handle common logic.
+
+Reverts are caught and validated using Woke's may_revert decorator.
+
+The state module is used to track loans, pools, and approvals.
+"""
+
 from pytypes.beedle.src.utils.Structs import Pool, Borrow, Loan, Refinance
 from pytypes.beedle.src.Lender import Lender
 from woke.development.transactions import may_revert
@@ -31,16 +71,16 @@ from .state import *
 
 REQUST_TYPES = Literal["tx", "call"]
 
-
-def al(pair):
-    print("filter pair", pair)
-    if pair[1].auctionLength > 100000:
-        return True
-    return False
+from .beedle import getPoolID 
 
 
 def setPool(pool: Pool) -> None:
-    import jsons
+    """
+    Creates a new lending pool.
+    
+    :param pool: A Pool object containing pool configuration details.
+    """
+
     id = get_lender().getPoolId(pool.lender, pool.loanToken, pool.collateralToken)
     outstandingLoans = get_lender().pools(id).outstandingLoans
     # we must make sure that we keep the outstanding loans
@@ -48,15 +88,10 @@ def setPool(pool: Pool) -> None:
     ret: bytes32 | None = None
     bal = ERC20(pool.loanToken).balanceOf(pool.lender)
 
-    print("balance", type(pool.poolBalance))
-
     with may_revert(PoolConfig) as e:
         ERC20(pool.loanToken).approve(get_lender(), pool.poolBalance, from_=pool.lender)
         tx = get_lender().setPool(pool, from_=pool.lender)
         poolId = tx.return_value
-        print("pool id", poolId)
-        print(jsons.dumps({"pool" : poolId}))
-
 
 
         pool_mirror()[poolId]=pool
@@ -76,6 +111,12 @@ def setPool(pool: Pool) -> None:
 
 
 def updateMaxLoanRatio(poolID: bytes32, maxLoanRatio: uint) -> None:
+    """
+    Updates the maximum loan ratio for a lending pool.
+    
+    :param poolID: The ID of the lending pool.
+    :param maxLoanRatio: The new maximum loan-to-collateral ratio.
+    """
     pool = get_lender().pools(poolID)
     get_lender().updateMaxLoanRatio(poolID, maxLoanRatio, from_=pool.lender)
     # validate then update our local data
@@ -85,6 +126,12 @@ def updateMaxLoanRatio(poolID: bytes32, maxLoanRatio: uint) -> None:
 
 
 def updateInterestRate(poolID: bytes32, interestRate: uint) -> None:
+    """
+    Updates the interest rate for a lending pool.
+    
+    :param poolID: The ID of the lending pool.
+    :param interestRate: The new interest rate for the loans in the pool.
+    """
     pool = pool_mirror()[poolID]
     get_lender().updateInterestRate(poolID, interestRate, from_=pool.lender)
     # validate then update our local data
@@ -94,6 +141,12 @@ def updateInterestRate(poolID: bytes32, interestRate: uint) -> None:
 
 
 def borrow(borrower: Account, borr: Borrow) -> None:
+    """
+    Borrows tokens from a lending pool.
+    
+    :param borrower: The account of the borrower.
+    :param borr: A Borrow object containing borrowing details.
+    """
     borrows = [borr]
     pool = get_lender().pools(borr.poolId)
 
@@ -130,10 +183,13 @@ def borrow(borrower: Account, borr: Borrow) -> None:
 
 
 def giveLoan(loan_id: uint, pool_id: bytes32) -> None:
-    ##this has to be called by the lender of the loan
-    ##and then we need a 2nd pool to give it too
-    ##pools must match
-
+    """
+    Transfers a loan between compatible pools.
+    
+    :param loan_id: The ID of the loan to be transferred.
+    :param pool_id: The ID of the target lending pool.
+    """
+    
     l: Loan = get_lender().loans(loan_id)
     debt = get_lender().getLoanDebt(loan_id)
 
@@ -167,6 +223,13 @@ def giveLoan(loan_id: uint, pool_id: bytes32) -> None:
 
 
 def addToPool(poolID: bytes32, amount: uint) -> None:
+    """
+    Increases a lending pool's liquidity by adding tokens.
+    
+    :param poolID: The ID of the lending pool.
+    :param amount: The amount of tokens to add to the pool.
+    """
+    
     pool = get_lender().pools(poolID)
     bal = ERC20(pool.loanToken).balanceOf(pool.lender)
     with may_revert((ERC20.InsufficientBalance)) as e:
@@ -177,10 +240,11 @@ def addToPool(poolID: bytes32, amount: uint) -> None:
 
 
 def refinance(refinance: Refinance) -> None:
-    ##this has to be called by the borrower of the loan
-    ##and then we need a 2nd pool to give it too
-    ##pools must match
-
+    """
+    Moves a loan to a new lending pool with different terms.
+    
+    :param refinance: A Refinance object containing refinance details.
+    """
     loan: Loan = get_lender().loans(refinance.loanId)
     pool: Pool = get_lender().pools(refinance.poolId)
     debt = get_lender().getLoanDebt(refinance.loanId)
@@ -240,54 +304,15 @@ def refinance(refinance: Refinance) -> None:
             set_last_debt(refinance.loanId, l.debt)
             pool_mirror().update()        
 
-            
-#    with default_chain.change_automine(False):
-#        if debt > refinance.debt:
-#            print("approve loan token for debt - we are paying down the loan")
-#            ERC20(pool.loanToken).approve(get_lender(), debt, from_=loan.borrower,confirmations=0, gas_limit="auto")
-#
-#        else:
-#            print("approve collateralToken for ")        
-#            atx = ERC20(pool.collateralToken).approve(
-#                get_lender(), refinance.collateral, from_=loan.borrower,confirmations=0, gas_limit="auto"
-#            )
-#            print("approve sent")
-#
-#        # we can try to give it
-#        with may_revert((LoanTooLarge, LoanTooSmall, TokenMismatch,ERC20.InsufficientBalance)) as e:
-#            #print("try refinance")
-#            tx = get_lender().refinance([refinance], from_=loan.borrower,confirmations=0, gas_limit="auto")
-#            #print("refinance events", tx.events)
-#
-#    print("mine refinance")
-#    default_chain.mine()
-#    print("mined refinance", e.value)
-#    if e.value is None:
-#        l: Loan = get_lender().loans(refinance.loanId)
-#        loan_mirror()[refinance.loanId] = l
-#        update_pool(refinance.poolId)
-#        set_last_debt(refinance.loanId, l.debt)
-#        pool_mirror().update()
-#
-#    else:
-#        if isinstance(e.value, TokenMismatch):
-#            assert (loan.loanToken != pool.loanToken) or (
-#                loan.collateralToken != pool.collateralToken
-#            )
-#        elif isinstance(e.value, LoanTooLarge):
-#            assert refinance.debt > pool.poolBalance
-#        elif isinstance(e.value, LoanTooSmall):
-#            assert refinance.debt < pool.minLoanSize
-#        elif isinstance(e.value, ERC20.InsufficientBalance):
-#            if debt > refinance.debt:            
-#                assert(ERC20(pool.loanToken).balanceOf(loan.borrower) < refinance.debt)
-#            else:
-#                assert(ERC20(pool.collateralToken).balanceOf(loan.borrower) < refinance.collateral)                
-#        else:
-#            assert False, "Uncaught error"
+
 
 
 def repay(loan_id: uint) -> None:
+    """
+    Repays all debt on a loan.
+    
+    :param loan_id: The ID of the loan to be fully repaid.
+    """ 
     loan = loan_mirror()[loan_id]
 
     print(loan)
@@ -311,6 +336,12 @@ def repay(loan_id: uint) -> None:
         
 
 def startAuction(loan_id: uint) -> None:
+    """
+    Initiates an auction for a loan.
+    
+    :param loan_id: The ID of the loan for which the auction should start.
+    """
+    
     loan = loan_mirror()[loan_id]
 
     with may_revert((AuctionStarted)) as e:
@@ -323,26 +354,46 @@ def startAuction(loan_id: uint) -> None:
     
 
 def buyLoan(loan_id: uint, pool_id: bytes32, lender: Account) -> None:
+    """
+    Buys a loan in an ongoing auction.
+    
+    :param loan_id: The ID of the loan to be purchased.
+    :param pool_id: The ID of the lending pool associated with the loan.
+    :param lender: The account of the buyer (lender).
+    """    
     loan = loan_mirror()[loan_id]
-    print("buyLoan", loan)
+    
+    oldPool = getPoolID(loan)
     with may_revert((AuctionNotStarted, AuctionEnded, RateTooHigh, PoolTooSmall)) as e:
         tx = get_lender().buyLoan(loan_id,pool_id, from_=lender)
-        print("buy loan", tx.events)
+    
         update_loan(loan_id)
+        newPool = getPoolID(loan_mirror()[loan_id])
+        #easy way to detect bug = make sure new poold id matches one passed
+        assert newPool == pool_id
+        update_pool(oldPool)
+        update_pool(newPool)
     print("buyLoan", e.value)
 
 def zapBuyLoan(loan_id: uint, lender: Account) -> None:
+    """
+    Buys a loan while setting up a compatible lending pool.
+    
+    :param loan_id: The ID of the loan to be purchased.
+    :param lender: The account of the buyer (lender).
+    """
+
     # it's fine if we already have a pool, this just adjusts it
     # get the existing pool if there is one .  we must preserve the existing outstandingLoans
     loan = loan_mirror()[loan_id]
-
+    oldPool = getPoolID(loan)
     id = get_lender().getPoolId(lender, loan.loanToken, loan.collateralToken)
     outstandingLoans = get_lender().pools(id).outstandingLoans
 
-    amount = loan.debt * 2
+    amount = loan.debt * 2                                    
     CERC20(loan.loanToken).approve(get_lender(), amount, from_=lender)
 
-    p = Pool(
+    p = Pool(    
         lender=get_address(lender),
         loanToken=loan.loanToken,
         collateralToken=loan.collateralToken,
@@ -359,12 +410,19 @@ def zapBuyLoan(loan_id: uint, lender: Account) -> None:
         print("zap buy", tx.events)
         poolID = get_lender().getPoolId(lender, loan.loanToken, loan.collateralToken)
         update_loan(loan_id)
+        update_pool(oldPool)
+        update_pool(id)
 
     if e.value is not None:
         print("zap failed", e.value)
 
 
 def seizeLoan(loan_id: uint):
+    """
+    Seizes collateral after an auction ends without a buyer.
+    
+    :param loan_id: The ID of the loan for which collateral should be seized.
+    """
     loan: Loan = get_lender().loans(loan_id)
     with may_revert((AuctionNotStarted, AuctionNotEnded)) as e:
         # anyone can call, but we will use the lender for now
@@ -379,3 +437,4 @@ def seizeLoan(loan_id: uint):
                 default_chain.blocks[-1].timestamp
                 < loan.auctionLength + loan.auctionStartTimestamp
             )
+
