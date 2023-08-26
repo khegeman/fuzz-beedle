@@ -4,7 +4,7 @@
 
 This project was done as an exploration of fuzzing techniques for the Beedle lending protocol during a competitive audit ([CodeHawks | Beedle - Oracle free perpetual lending](https://www.codehawks.com/contests/clkbo1fa20009jr08nyyf9wbx).. 
 
-Beedle is a decentralized lending protocol that allows lending and borrowing without oracles (short background on Beedle).
+Beedle is a decentralized lending protocol that allows lending and borrowing without oracles.
 
 The fuzz test focuses on testing the core [Lender.sol](https://github.com/Cyfrin/2023-07-beedle/blob/main/src/Lender.sol) contract which contains the logic for pools, loans, and related actions like lending, borrowing, repaying, liquidating etc.
 
@@ -120,6 +120,6 @@ While working on this project, I created a method to record and replay all fuzz 
 ## References
 
 - [GitHub - Cyfrin/2023-07-beedle](https://github.com/Cyfrin/2023-07-beedle)
-- [GitHub - Ackee-Blockchain/woke: Woke is a Python-based development and testing framework for Solidity.](https://github.com/Ackee-Blockchain/woke)
+- [Woke.](https://github.com/Ackee-Blockchain/woke)
 - [Hypothesis](https://hypothesis.readthedocs.io/en/latest/)
-- [GitHub - khegeman/wokelib: A collection of functions for testing solidity contracts](https://github.com/khegeman/wokelib)
+- [wokelib](https://github.com/khegeman/wokelib)
