@@ -120,16 +120,41 @@ def update_pool(pool_id: bytes32):
 
 
 def get_last_debt(loan_id: uint) -> uint:
+    """Get the last recorded debt for a given loan.  Used by the monotonic debt invariant.
+
+    Args:
+        loan_id (uint): The ID of the loan.
+
+    Returns:
+        uint: The last recorded debt for the loan. If no debt is recorded, returns 0.
+    """
     global _last_debt
     return _last_debt.get(loan_id, 0)
 
 
 def set_last_debt(loan_id: uint, debt: uint):
+    """Set the last recorded debt for a given loan. Used by the monotonic debt invariant.
+
+    Args:
+        loan_id (uint): The ID of the loan.
+        debt (uint): The debt to record for the loan.
+    """
     global _last_debt
     _last_debt[loan_id] = debt
 
 
 def initialize(token_count: int):
+    """
+    Initializes the state for fuzz testing.
+
+    This function sets up the initial state for fuzz testing. It sets up the owner, clears the last debt, 
+    deploys the Lender contract, binds the pool and loan mirrors to the Lender contract's pools and loans, 
+    clears and sets up the users and tokens, and mints tokens for the owner and users.
+
+    Args:
+        token_count (int): The number of tokens to create.
+    """
+    
     global _owner
     global _last_debt
     global _pool_mirror
@@ -155,4 +180,3 @@ def initialize(token_count: int):
         for u in users():
             t.mint(u, to_wei(10, "ether"), from_=_owner)
 
-    print([t.name() for t in tokens()])

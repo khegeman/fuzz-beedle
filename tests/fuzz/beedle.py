@@ -5,7 +5,6 @@ from woke.development.primitive_types import bytes32, uint
 from pytypes.tests.contracts.token import CERC20
 from pytypes.solady.src.tokens.ERC20 import ERC20
 
-# A lot of implementation logic is in this file
 from woke.development.core import Address
 from dataclasses import dataclass, asdict
 from typing import Union, Literal
@@ -23,8 +22,6 @@ def removeFromPool(
 ) -> uint:
     pool = get_lender().pools(poolID)
     balanceBefore = ERC20(pool.loanToken).balanceOf(account)
-    print(pool)
-    print(amount)
     tx = get_lender().removeFromPool(
         poolID, amount, from_=account, request_type=request_type
     )

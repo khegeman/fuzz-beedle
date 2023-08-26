@@ -98,7 +98,6 @@ def setPool(pool: Pool) -> None:
         pool_mirror().assert_equals_remote()
 
     if e.value is not None:
-        print(e.value)
 
         # should be one of these
         AL = (
@@ -152,23 +151,20 @@ def borrow(borrower: Account, borr: Borrow) -> None:
 
     ERC20(pool.collateralToken).approve(get_lender(), borr.collateral, from_=borrower)
 
-    print(borrows)
-    print(pool.collateralToken, borrower)
+
     bal = ERC20(pool.collateralToken).balanceOf(borrower)
 
     with may_revert((LoanTooLarge, LoanTooSmall, ERC20.InsufficientBalance)) as e:
         tx = get_lender().borrow(borrows, from_=borrower)
-        for ev in tx.events:
-            print("borrow", ev)
 
         loanID = tx.events[4].loanId
-        print("loan id", loanID)
+
         loan = get_lender().loans(loanID)
         loan_mirror()[loanID] = loan
         update_pool(borr.poolId)
 
     if e.value is not None:
-        print("loan failed", e.value)
+
         loan_too_large = borr.debt > pool.poolBalance
         if loan_too_large:
             assert type(e.value) == LoanTooLarge
@@ -252,19 +248,14 @@ def refinance(refinance: Refinance) -> None:
     tx=None
     with default_chain.change_automine(False):
         if debt > refinance.debt:
-            print("approve loan token for debt - we are paying down the loan")
             ERC20(pool.loanToken).approve(get_lender(), debt, from_=loan.borrower,confirmations=0, gas_limit="auto")
 
         else:
-            print("approve collateralToken for ")        
             atx = ERC20(pool.collateralToken).approve(
                 get_lender(), refinance.collateral, from_=loan.borrower,confirmations=0, gas_limit="auto"
             )
-            print("approve sent")
 
-        # we can try to give it
-        
-            #print("try refinance")
+
         eTokenMismatch = (loan.loanToken != pool.loanToken) or (
                 loan.collateralToken != pool.collateralToken
             )
@@ -273,7 +264,7 @@ def refinance(refinance: Refinance) -> None:
         eInsufficientBalance = (ERC20(pool.loanToken).balanceOf(loan.borrower) < debt - refinance.debt) if debt > refinance.debt else (ERC20(pool.collateralToken).balanceOf(loan.borrower) < refinance.collateral)
         eRatioTooHigh = math.ceil((refinance.debt * 10 ** 18) / refinance.collateral) > pool.maxLoanRatio
         shouldRevert = any([eTokenMismatch,eLoanTooLarge,eLoanTooSmall])
-        print(shouldRevert, [eTokenMismatch,eLoanTooLarge,eLoanTooSmall,eInsufficientBalance])
+        
         try:
             tx = get_lender().refinance([refinance], from_=loan.borrower,confirmations=0, gas_limit="auto")
         except TokenMismatch:
@@ -283,20 +274,18 @@ def refinance(refinance: Refinance) -> None:
         except LoanTooSmall:
                 assert eLoanTooSmall
         except  ERC20.InsufficientBalance:
-            print("lt balance", (ERC20(pool.loanToken)).balanceOf(loan.borrower), " debt ", refinance.debt, "loan ", debt)
             assert eInsufficientBalance 
         except RatioTooHigh:
             assert eRatioTooHigh             
         else:
-            print("tx",tx)
+
             assert not shouldRevert
-            print("refinanced succesful",tx)
+    
    
-    print("mine")
+    
     default_chain.mine()
-    print("mined",tx)
+    
     if tx is not None:
-        print(tx.events)
         if tx.error is None:
             l: Loan = get_lender().loans(refinance.loanId)
             loan_mirror()[refinance.loanId] = l
@@ -315,8 +304,6 @@ def repay(loan_id: uint) -> None:
     """ 
     loan = loan_mirror()[loan_id]
 
-    print(loan)
-
     # The debt changes every block.  So we need to approve more than we owe
 
     #debt changes every block, so it's best if we approve and repay in the same block
@@ -328,7 +315,6 @@ def repay(loan_id: uint) -> None:
 
     default_chain.mine()
     if e.value is None:
-        print("loan repayed!")
         update_loan(loan_id)
         pool_mirror().update()    
     elif isinstance(e.value,ERC20.InsufficientBalance):
@@ -373,7 +359,7 @@ def buyLoan(loan_id: uint, pool_id: bytes32, lender: Account) -> None:
         assert newPool == pool_id
         update_pool(oldPool)
         update_pool(newPool)
-    print("buyLoan", e.value)
+
 
 def zapBuyLoan(loan_id: uint, lender: Account) -> None:
     """
@@ -407,14 +393,11 @@ def zapBuyLoan(loan_id: uint, lender: Account) -> None:
 
     with may_revert((AuctionNotStarted, AuctionEnded, RateTooHigh, PoolTooSmall)) as e:
         tx = get_lender().zapBuyLoan(p, loan_id, from_=lender)
-        print("zap buy", tx.events)
         poolID = get_lender().getPoolId(lender, loan.loanToken, loan.collateralToken)
         update_loan(loan_id)
         update_pool(oldPool)
         update_pool(id)
 
-    if e.value is not None:
-        print("zap failed", e.value)
 
 
 def seizeLoan(loan_id: uint):
